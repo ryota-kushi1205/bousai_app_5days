@@ -2,14 +2,10 @@
 
 {% block content %}
 <h2>避難所登録</h2>
-<p>新しい避難所情報を登録します。</p>
+<p>新しい避難所を登録する</p>
 
 <!-- 成功・エラーメッセージ表示 -->
-{% if success %}
-  <p>{{ message }}</p>
-{% endif %}
-
-{% if error %}
+{% if success or error %}
   <p>{{ message }}</p>
 {% endif %}
 
