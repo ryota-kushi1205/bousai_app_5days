@@ -2,6 +2,62 @@
 
 {% block content %}
 <style>
+        .emergency-section {
+                margin-bottom: 26px;
+                padding: 0;
+                border: 1px solid #d9a29a;
+                border-radius: 12px;
+                overflow: hidden;
+                background: var(--surface);
+                box-shadow: var(--shadow);
+        }
+        .emergency-heading {
+                margin: 0;
+                padding: 14px 22px;
+                color: #fff;
+                background: #d83b2d;
+                font-size: 20px;
+                font-weight: 800;
+        }
+        .emergency-content { padding: 16px 22px 18px; }
+        .emergency-empty { margin: 0; color: var(--green); font-weight: 700; }
+        .emergency-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+        .emergency-item {
+                padding: 11px 14px;
+                border-left: 4px solid #e05a47;
+                border-radius: 4px;
+                background: #fff5f2;
+        }
+        .emergency-item p { margin: 0; color: #7c2f28; font-weight: 800; }
+        .emergency-meta { margin-top: 3px; color: #916b67; font-size: 13px; }
+        .home-actions {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px;
+                margin-bottom: 26px;
+        }
+        .home-action {
+                display: flex;
+                min-height: 112px;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: 16px 18px;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                color: #fff;
+                text-decoration: none;
+                box-shadow: var(--shadow);
+                transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .home-action:hover, .home-action:focus-visible {
+                transform: translateY(-2px);
+                box-shadow: 0 14px 30px rgba(25, 60, 115, .16);
+        }
+        .home-action.search { background: #1676d2; }
+        .home-action.register { background: #1b9a68; }
+        .home-action.board { background: #e56a2f; }
+        .home-action-label { font-size: 18px; font-weight: 800; }
+        .home-action-note { font-size: 12px; opacity: .92; }
     .home-section {
         margin-bottom: 26px;
         padding: 20px 22px 24px;
@@ -34,12 +90,52 @@
     .weather-content .clear { color: var(--green); font-weight: 800; }
     .weather-content .warning { color: #d35a3a; font-weight: 700; }
     @media (max-width: 600px) {
+                .home-actions { grid-template-columns: 1fr; gap: 10px; }
+                .home-action { min-height: 88px; }
+                .emergency-heading { padding: 12px 16px; font-size: 18px; }
+                .emergency-content { padding: 14px 16px 16px; }
         .home-section { padding: 16px; }
         .section-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
         .section-heading h2 { font-size: 17px; }
         #shelterMap { height: 270px; }
     }
 </style>
+
+<section class="emergency-section" aria-labelledby="emergency-title">
+        <h1 class="emergency-heading" id="emergency-title">緊急情報</h1>
+        <div class="emergency-content" id="emergencyContent">
+                {% if resident_notices %}
+                <ul class="emergency-list">
+                        {% for notice in resident_notices %}
+                        <li class="emergency-item">
+                                <p>⚠ {{ notice.content }}</p>
+                                <div class="emergency-meta">
+                                        {% if notice.shelter %}避難先: {{ notice.shelter }}　{% endif %}
+                                        状態: {{ notice.status }}
+                                </div>
+                        </li>
+                        {% endfor %}
+                </ul>
+                {% else %}
+                <p class="emergency-empty">現在、住民向けの緊急情報はありません</p>
+                {% endif %}
+        </div>
+</section>
+
+<nav class="home-actions" aria-label="主要メニュー">
+        <a class="home-action search" href="{{ url_for('shelter_search') }}">
+                <span class="home-action-label">避難所を探す　›</span>
+                <span class="home-action-note">近くの避難所を確認</span>
+        </a>
+        <a class="home-action register" href="{{ url_for('shelter_register') }}">
+                <span class="home-action-label">避難所を登録　›</span>
+                <span class="home-action-note">管理者向け</span>
+        </a>
+        <a class="home-action board" href="{{ url_for('board') }}">
+                <span class="home-action-label">指示・発信ボード　›</span>
+                <span class="home-action-note">お知らせ・支援情報を確認</span>
+        </a>
+</nav>
 
 <section class="home-section" aria-labelledby="map-title">
     <div class="section-heading">
