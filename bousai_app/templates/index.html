@@ -127,14 +127,25 @@
                 <span class="home-action-label">避難所を探す　›</span>
                 <span class="home-action-note">近くの避難所を確認</span>
         </a>
-        <a class="home-action register" href="{{ url_for('shelter_register') }}">
-                <span class="home-action-label">避難所を登録　›</span>
-                <span class="home-action-note">管理者向け</span>
-        </a>
-        <a class="home-action board" href="{{ url_for('board') }}">
-                <span class="home-action-label">指示・発信ボード　›</span>
-                <span class="home-action-note">お知らせ・支援情報を確認</span>
-        </a>
+        {% if session.user_type == 'admin' %}
+                <a class="home-action register" href="{{ url_for('shelter_register') }}">
+                        <span class="home-action-label">避難所を登録　›</span>
+                        <span class="home-action-note">管理者向け</span>
+                </a>
+                <a class="home-action board" href="{{ url_for('board') }}">
+                        <span class="home-action-label">指示・発信ボード　›</span>
+                        <span class="home-action-note">お知らせ・支援情報を確認</span>
+                </a>
+        {% elif session.user_type == 'resident' %}
+                <button class="home-action register resident-action" id="safety-check" type="button">
+                        <span class="home-action-label">安否確認</span>
+                        <span class="home-action-note">家族・会社のグループで確認</span>
+                </button>
+                <button class="home-action board resident-action" id="favorite-shelters" type="button">
+                        <span class="home-action-label">近隣のお気に入り避難所の登録</span>
+                        <span class="home-action-note">よく利用する避難所を登録</span>
+                </button>
+        {% endif %}
 </nav>
 
 <section class="home-section" aria-labelledby="map-title">

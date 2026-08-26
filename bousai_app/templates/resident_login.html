@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}住民ログイン{% endblock %}
+
+{% block content %}
+<h2>住民ログイン</h2>
+<p>家族名または会社名を入力してください。</p>
+
+{% if error %}
+  <p>{{ message }}</p>
+{% endif %}
+
+<form method="post">
+  {% if next %}
+    <input type="hidden" name="next" value="{{ next }}">
+  {% endif %}
+
+  <p>
+    <label for="group_name">家族名・会社名</label><br>
+    <input type="text" id="group_name" name="group_name" required>
+  </p>
+
+  <p><button type="submit">住民としてログイン</button></p>
+</form>
+{% endblock %}

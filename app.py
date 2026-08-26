@@ -23,6 +23,8 @@ ADMIN_CREDENTIALS = {
     'admin': '123'
 }
 
+RESIDENT_LOGIN = 'resident'
+
 # ────────────────────────────────
 # 気象警報・注意報設定
 PREFECTURE_CODE = "020000"  # 青森県
@@ -125,6 +127,15 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
             # 現在のURLをnextパラメータとしてログイン画面にリダイレクト
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    """管理者権限が必要なページに付けるデコレータ"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('user_type') != 'admin':
             return redirect(url_for('login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function
@@ -269,6 +280,7 @@ def login():
         if username:
             session['logged_in'] = True
             session['username'] = username
+            session['user_type'] = 'admin'
             # ログイン成功後は指定されたページにリダイレクト
             return redirect(next_url)
         return render_template('login.html', error=True, message="パスワードが正しくありません。", next=next_url)
@@ -279,6 +291,34 @@ def login():
 
     return render_template('login.html', next=next_url)
 
+# 住民ログインページ
+@app.route('/resident_login', methods=['GET', 'POST'])
+def resident_login():
+    next_url = request.args.get('next') or request.form.get('next')
+
+    if not next_url or not is_safe_url(next_url):
+        next_url = url_for('index')
+
+    if request.method == 'POST':
+        group_name = request.form.get('group_name', '').strip()
+        if not group_name:
+            return render_template(
+                'resident_login.html',
+                error=True,
+                message='家族名または会社名を入力してください。',
+                next=next_url
+            )
+
+        session['logged_in'] = True
+        session['username'] = group_name
+        session['user_type'] = RESIDENT_LOGIN
+        return redirect(next_url)
+
+    if session.get('logged_in'):
+        return redirect(next_url)
+
+    return render_template('resident_login.html', next=next_url)
+
 # ログアウト
 @app.route('/logout')
 def logout():
@@ -287,7 +327,7 @@ def logout():
 
 # 避難所登録ページ
 @app.route('/shelter_register', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def shelter_register():
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -322,7 +362,7 @@ def all_shelters():
 
 # 指示ボード：住民向けの指示を一覧で確認する
 @app.route('/board')
-@login_required
+@admin_required
 def board():
     resident_instructions = [i for i in instructions if i.get('target') == '住民']
     return render_template('board.html', instructions=resident_instructions)
