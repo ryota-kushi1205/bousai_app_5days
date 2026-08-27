@@ -4,6 +4,7 @@ from functools import wraps
 import json
 import os
 import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 # app.py はプロジェクト直下に置く。
@@ -85,6 +86,7 @@ WARNING_CODES = {
 DATA_FILE = os.path.join(APP_DIR, 'data', 'shelters.json')
 INSTRUCTIONS_FILE = os.path.join(APP_DIR, 'data', 'instructions.json')
 SAFETY_FILE = os.path.join(APP_DIR, 'data', 'safety_status.json')
+FAVORITES_FILE = os.path.join(APP_DIR, 'data', 'favorite_shelters.json')
 
 def load_json(path, default):
     """JSONファイルを読み込む（存在しない・壊れている場合は default を返す）"""
@@ -97,6 +99,7 @@ def load_json(path, default):
 shelters = load_json(DATA_FILE, [])
 instructions = load_json(INSTRUCTIONS_FILE, [])
 safety_statuses = load_json(SAFETY_FILE, [])
+favorite_shelters = load_json(FAVORITES_FILE, {})
 
 def save_shelters():
     """避難所データをファイルに保存する"""
@@ -119,6 +122,14 @@ def save_safety_statuses():
     try:
         with open(SAFETY_FILE, 'w', encoding='utf-8') as f:
             json.dump(safety_statuses, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def save_favorite_shelters():
+    """住民グループごとのお気に入り避難所を保存する"""
+    try:
+        with open(FAVORITES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(favorite_shelters, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
 # ────────────────────────────────
@@ -171,6 +182,36 @@ def format_report_time(iso_str):
 def filter_shelters(district=None):
     """district 指定があれば一致する避難所のみ、なければ全件を返す"""
     return [s for s in shelters if not district or s.get('district') == district]
+
+
+def get_shelter_address(shelter):
+    """住所担当側の代表的な項目名を吸収する"""
+    return shelter.get('address') or shelter.get('住所') or shelter.get('location')
+
+
+def geocode_shelter(shelter):
+    """座標がなければ住所から座標を取得し、避難所オブジェクトにキャッシュする"""
+    if shelter.get('latitude') and shelter.get('longitude'):
+        return shelter
+
+    address = get_shelter_address(shelter)
+    if not address:
+        return shelter
+
+    try:
+        query = urllib.parse.urlencode({'q': address, 'format': 'jsonv2', 'limit': 1})
+        req = urllib.request.Request(
+            f'https://nominatim.openstreetmap.org/search?{query}',
+            headers={'User-Agent': 'bousai-app/1.0'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            results = json.loads(response.read())
+        if results:
+            shelter['latitude'] = float(results[0]['lat'])
+            shelter['longitude'] = float(results[0]['lon'])
+    except (KeyError, TypeError, ValueError, urllib.error.URLError, TimeoutError):
+        pass
+    return shelter
 
 
 def parse_area_warnings(warning_data):
@@ -410,12 +451,56 @@ def shelter_register():
 # 避難所検索ページ
 @app.route('/shelter_search')
 def shelter_search():
-    return render_template('shelter_search.html')
+    query = request.args.get('q', '').strip().lower()
+    results = [
+        shelter for shelter in shelters
+        if not query or query in shelter.get('name', '').lower()
+    ]
+    registered_ids = set(favorite_shelters.get(session.get('username', ''), []))
+    return render_template(
+        'shelter_search.html',
+        results=results,
+        registered_ids=registered_ids,
+        registered=request.args.get('registered') == '1'
+    )
 
 # 全施設一覧ページ
 @app.route('/all_shelters')
 def all_shelters():
-    return render_template('search_results.html', results=shelters)
+    return redirect(url_for('shelter_search'))
+
+
+@app.route('/favorite_shelters', methods=['POST'])
+@login_required
+def add_favorite_shelter():
+    if session.get('user_type') != RESIDENT_LOGIN:
+        return redirect(url_for('index'))
+
+    try:
+        shelter_id = int(request.form.get('shelter_id', ''))
+    except ValueError:
+        return redirect(url_for('shelter_search'))
+
+    if not any(shelter.get('id') == shelter_id for shelter in shelters):
+        return redirect(url_for('shelter_search'))
+
+    group_name = session.get('username')
+    registered = favorite_shelters.setdefault(group_name, [])
+    if shelter_id not in registered:
+        registered.append(shelter_id)
+        save_favorite_shelters()
+    return redirect(url_for('shelter_search', registered='1'))
+
+
+@app.route('/api/favorite_shelters')
+def get_favorite_shelters():
+    group_name = session.get('username', '')
+    registered_ids = set(favorite_shelters.get(group_name, []))
+    results = []
+    for shelter in shelters:
+        if shelter.get('id') in registered_ids:
+            results.append(geocode_shelter(shelter))
+    return jsonify(results)
 
 
 # 指示ボード：住民向けの指示を一覧で確認する

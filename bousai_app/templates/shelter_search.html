@@ -2,7 +2,42 @@
 
 {% block content %}
 <h2>避難所検索</h2>
-<p>登録されている避難所を確認できます。</p>
+<p>避難所一覧から、お気に入りに登録する施設を選べます。</p>
+
+{% if registered %}
+	<p role="status">登録完了しました</p>
+{% endif %}
+
+<form method="get" action="{{ url_for('shelter_search') }}">
+	<label for="shelter-query">避難所名で検索</label>
+	<input type="search" id="shelter-query" name="q" value="{{ request.args.get('q', '') }}">
+	<button type="submit">検索</button>
+</form>
+
+{% if results %}
+	<ul>
+		{% for shelter in results %}
+			<li>
+				<strong>{{ shelter.name }}</strong>
+				{% if shelter.address or shelter.住所 or shelter.location %}
+					<span>{{ shelter.address or shelter.住所 or shelter.location }}</span>
+				{% endif %}
+				{% if session.user_type == 'resident' %}
+					{% if shelter.id in registered_ids %}
+						<span>お気に入り登録済み</span>
+					{% else %}
+						<form method="post" action="{{ url_for('add_favorite_shelter') }}">
+							<input type="hidden" name="shelter_id" value="{{ shelter.id }}">
+							<button type="submit">お気に入りに登録</button>
+						</form>
+					{% endif %}
+				{% endif %}
+			</li>
+		{% endfor %}
+	</ul>
+{% else %}
+	<p>該当する避難所が見つかりませんでした</p>
+{% endif %}
 
 <p><a href="/all_shelters">全施設一覧</a></p>
 {% endblock %}

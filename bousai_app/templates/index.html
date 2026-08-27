@@ -141,10 +141,10 @@
                         <span class="home-action-label">安否確認</span>
                         <span class="home-action-note">家族・会社のグループで確認</span>
                 </a>
-                <button class="home-action board resident-action" id="favorite-shelters" type="button">
+                <a class="home-action board resident-action" id="favorite-shelters" href="{{ url_for('shelter_search') }}">
                         <span class="home-action-label">近隣のお気に入り避難所の登録</span>
                         <span class="home-action-note">よく利用する避難所を登録</span>
-                </button>
+                </a>
         {% endif %}
 </nav>
 
@@ -175,13 +175,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        fetch('/shelters')
+        fetch('/api/favorite_shelters')
                 .then(response => response.ok ? response.json() : [])
                 .then(shelters => shelters.forEach(shelter => {
                         if (shelter.latitude && shelter.longitude) {
                                 L.marker([shelter.latitude, shelter.longitude])
                                         .addTo(map)
-                                        .bindPopup(shelter.name);
+                                        .bindPopup(`${shelter.name}<br>${shelter.address || shelter.住所 || shelter.location || ''}`);
                         }
                 }))
                 .catch(() => {});
