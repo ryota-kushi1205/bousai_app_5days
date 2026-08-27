@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}安否確認{% endblock %}
+
+{% block content %}
+<style>
+  .safety-page { max-width: 680px; margin: 0 auto; }
+  .safety-page h1 { margin: 0 0 8px; color: var(--blue); font-size: 25px; }
+  .safety-group { margin: 0 0 22px; color: var(--muted); }
+  .safety-form, .safety-list { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+  .safety-form { margin-bottom: 24px; }
+  .safety-form label { display: block; margin-bottom: 6px; font-weight: 700; }
+  .safety-form input, .safety-form select { width: 100%; padding: 10px; border: 1px solid #cbd6e6; border-radius: 5px; font: inherit; }
+  .safety-form button { margin-top: 14px; padding: 10px 18px; border: 0; border-radius: 5px; color: #fff; background: var(--blue); font: inherit; font-weight: 700; cursor: pointer; }
+  .safety-form button:hover, .safety-form button:focus-visible { background: var(--blue-dark); }
+  .safety-error { color: #b6382d; font-weight: 700; }
+  .safety-list h2 { margin: 0 0 12px; font-size: 19px; }
+  .safety-record { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .safety-record strong { display: block; }
+  .safety-record small { color: var(--muted); }
+  .safety-status { padding: 4px 9px; border-radius: 4px; color: #fff; background: var(--green); font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .safety-status.support { background: #d35a3a; }
+  .safety-status.evacuated { background: #d49327; }
+  @media (max-width: 600px) { .safety-form, .safety-list { padding: 16px; } }
+</style>
+
+<section class="safety-page" aria-labelledby="safety-title">
+  <h1 id="safety-title">安否確認</h1>
+  <p class="safety-group">確認する家族: {{ group_name }}</p>
+
+  <form class="safety-form" method="post">
+    {% if error %}<p class="safety-error">{{ message }}</p>{% endif %}
+    <p>
+      <label for="member_name">名前</label>
+      <input id="member_name" name="member_name" required maxlength="50" placeholder="例: 山田 太郎">
+    </p>
+    <p>
+      <label for="status">安否状況</label>
+      <select id="status" name="status" required>
+        <option value="">選択してください</option>
+        {% for status in statuses %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+      </select>
+    </p>
+    <button type="submit">安否を登録する</button>
+  </form>
+
+  <section class="safety-list" aria-labelledby="records-title">
+    <h2 id="records-title">家族の安否</h2>
+    {% if records %}
+      {% for record in records|sort(attribute='timestamp', reverse=true) %}
+        <div class="safety-record">
+          <div><strong>{{ record.member_name }}</strong><small>{{ record.timestamp }}</small></div>
+          <span class="safety-status{% if record.status == '要支援' %} support{% elif record.status == '避難中' %} evacuated{% endif %}">{{ record.status }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>まだ安否情報が登録されていません。</p>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

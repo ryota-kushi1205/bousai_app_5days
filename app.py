@@ -84,6 +84,7 @@ WARNING_CODES = {
 # サンプルデータの読み込み
 DATA_FILE = os.path.join(APP_DIR, 'data', 'shelters.json')
 INSTRUCTIONS_FILE = os.path.join(APP_DIR, 'data', 'instructions.json')
+SAFETY_FILE = os.path.join(APP_DIR, 'data', 'safety_status.json')
 
 def load_json(path, default):
     """JSONファイルを読み込む（存在しない・壊れている場合は default を返す）"""
@@ -95,6 +96,7 @@ def load_json(path, default):
 
 shelters = load_json(DATA_FILE, [])
 instructions = load_json(INSTRUCTIONS_FILE, [])
+safety_statuses = load_json(SAFETY_FILE, [])
 
 def save_shelters():
     """避難所データをファイルに保存する"""
@@ -109,6 +111,14 @@ def save_instructions():
     try:
         with open(INSTRUCTIONS_FILE, 'w', encoding='utf-8') as f:
             json.dump(instructions, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def save_safety_statuses():
+    """安否情報をファイルに保存する"""
+    try:
+        with open(SAFETY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(safety_statuses, f, ensure_ascii=False, indent=2)
     except Exception:
         pass
 # ────────────────────────────────
@@ -318,6 +328,54 @@ def resident_login():
         return redirect(next_url)
 
     return render_template('resident_login.html', next=next_url)
+
+# 安否確認ページ：同じ家族名でログインした住民だけが確認できる
+@app.route('/safety_check', methods=['GET', 'POST'])
+@login_required
+def safety_check():
+    if session.get('user_type') != RESIDENT_LOGIN:
+        return redirect(url_for('index'))
+
+    group_name = session.get('username')
+    if request.method == 'POST':
+        member_name = request.form.get('member_name', '').strip()
+        status = request.form.get('status', '').strip()
+        allowed_statuses = {'無事', '避難中', '要支援'}
+        if not member_name or status not in allowed_statuses:
+            return render_template(
+                'safety_check.html',
+                error=True,
+                message='名前と安否状況を入力してください。',
+                statuses=allowed_statuses,
+                group_name=group_name,
+                records=[record for record in safety_statuses
+                         if record.get('group_name') == group_name]
+            )
+
+        safety_statuses[:] = [
+            record for record in safety_statuses
+            if not (record.get('group_name') == group_name
+                    and record.get('member_name') == member_name)
+        ]
+        safety_statuses.append({
+            'group_name': group_name,
+            'member_name': member_name,
+            'status': status,
+            'timestamp': get_japan_time()
+        })
+        save_safety_statuses()
+        return redirect(url_for('safety_check'))
+
+    records = [
+        record for record in safety_statuses
+        if record.get('group_name') == group_name
+    ]
+    return render_template(
+        'safety_check.html',
+        records=records,
+        statuses=['無事', '避難中', '要支援'],
+        group_name=group_name
+    )
 
 # ログアウト
 @app.route('/logout')

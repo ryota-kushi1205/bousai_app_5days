@@ -139,7 +139,7 @@
         <a href="{{ url_for('shelter_register') }}">避難所登録</a>
         <a href="{{ url_for('board') }}">指示・発信ボード</a>
       {% elif session.user_type == 'resident' %}
-        <a href="#safety-check">安否確認</a>
+        <a href="{{ url_for('safety_check') }}">安否確認</a>
         <a href="#favorite-shelters">近隣のお気に入り避難所の登録</a>
       {% endif %}
       {% if session.logged_in %}

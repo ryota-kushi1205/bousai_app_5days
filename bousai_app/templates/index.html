@@ -137,10 +137,10 @@
                         <span class="home-action-note">お知らせ・支援情報を確認</span>
                 </a>
         {% elif session.user_type == 'resident' %}
-                <button class="home-action register resident-action" id="safety-check" type="button">
+                <a class="home-action register resident-action" id="safety-check" href="{{ url_for('safety_check') }}">
                         <span class="home-action-label">安否確認</span>
                         <span class="home-action-note">家族・会社のグループで確認</span>
-                </button>
+                </a>
                 <button class="home-action board resident-action" id="favorite-shelters" type="button">
                         <span class="home-action-label">近隣のお気に入り避難所の登録</span>
                         <span class="home-action-note">よく利用する避難所を登録</span>
